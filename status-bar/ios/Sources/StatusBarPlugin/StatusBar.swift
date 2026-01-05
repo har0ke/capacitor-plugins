@@ -4,6 +4,7 @@ import Capacitor
 public class StatusBar {
 
     private var bridge: CAPBridgeProtocol
+    private var config: StatusBarConfig
     private var isOverlayingWebview = true
     private var backgroundColor = UIColor.black
     private var backgroundView: UIView?
@@ -11,16 +12,17 @@ public class StatusBar {
 
     init(bridge: CAPBridgeProtocol, config: StatusBarConfig) {
         self.bridge = bridge
-        setupObservers(with: config)
+        self.config = config
+        setupObservers()
     }
 
     deinit {
         observers.forEach { NotificationCenter.default.removeObserver($0) }
     }
 
-    private func setupObservers(with config: StatusBarConfig) {
+    private func setupObservers() {
         observers.append(NotificationCenter.default.addObserver(forName: .capacitorViewDidAppear, object: .none, queue: .none) { [weak self] _ in
-            self?.handleViewDidAppear(config: config)
+            self?.handleViewDidAppear()
         })
         observers.append(NotificationCenter.default.addObserver(forName: .capacitorStatusBarTapped, object: .none, queue: .none) { [weak self] _ in
             self?.bridge.triggerJSEvent(eventName: "statusTap", target: "window")
@@ -30,7 +32,7 @@ public class StatusBar {
         })
     }
 
-    private func handleViewDidAppear(config: StatusBarConfig) {
+    private func handleViewDidAppear() {
         setStyle(config.style)
         setBackgroundColor(config.backgroundColor)
         setOverlaysWebView(config.overlaysWebView)
@@ -44,10 +46,12 @@ public class StatusBar {
     }
 
     func setStyle(_ style: UIStatusBarStyle) {
+        config.style = style
         bridge.statusBarStyle = style
     }
 
     func setBackgroundColor(_ color: UIColor) {
+        config.backgroundColor = color
         backgroundColor = color
         backgroundView?.backgroundColor = color
     }
@@ -112,6 +116,7 @@ public class StatusBar {
     }
 
     func setOverlaysWebView(_ overlay: Bool) {
+        config.overlaysWebView = overlay
         if overlay == isOverlayingWebview { return }
         isOverlayingWebview = overlay
         if overlay {
