@@ -36,6 +36,7 @@ public class StatusBar {
         setStyle(config.style)
         setBackgroundColor(config.backgroundColor)
         setOverlaysWebView(config.overlaysWebView)
+        resizeWebView()
     }
 
     private func handleViewWillTransition() {
