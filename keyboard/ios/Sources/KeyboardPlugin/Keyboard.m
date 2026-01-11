@@ -85,14 +85,14 @@ double stageManagerOffset;
   }
 
   self.hideFormAccessoryBar = YES;
-  
+
   NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
-  
+
   [nc addObserver:self selector:@selector(onKeyboardDidHide:) name:UIKeyboardDidHideNotification object:nil];
   [nc addObserver:self selector:@selector(onKeyboardDidShow:) name:UIKeyboardDidShowNotification object:nil];
   [nc addObserver:self selector:@selector(onKeyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
   [nc addObserver:self selector:@selector(onKeyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
-  
+
   [nc removeObserver:self.webView name:UIKeyboardWillHideNotification object:nil];
   [nc removeObserver:self.webView name:UIKeyboardWillShowNotification object:nil];
   [nc removeObserver:self.webView name:UIKeyboardWillChangeFrameNotification object:nil];
@@ -110,7 +110,7 @@ double stageManagerOffset;
 
 - (void)onKeyboardWillHide:(NSNotification *)notification
 {
-  [self setKeyboardHeight:0 delay:0.01];
+  [self setKeyboardHeight:0 delay:0.1];
   [self resetScrollView];
   hideTimer = [NSTimer scheduledTimerWithTimeInterval:0 repeats:NO block:^(NSTimer * _Nonnull timer) {
     [self.bridge triggerWindowJSEventWithEventName:@"keyboardWillHide"];
@@ -127,7 +127,7 @@ double stageManagerOffset;
   CGRect rect = [[notification.userInfo valueForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
 
   double height = rect.size.height;
-    
+
   if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad) {
     if (stageManagerOffset > 0) {
       height = stageManagerOffset;
@@ -137,13 +137,12 @@ double stageManagerOffset;
       if (height < 0) {
         height = 0;
       }
-        
+
       stageManagerOffset = height;
     }
   }
 
-  double duration = [[notification.userInfo valueForKey:UIKeyboardAnimationDurationUserInfoKey] doubleValue]+0.2;
-  [self setKeyboardHeight:height delay:duration];
+  [self setKeyboardHeight:height delay:0];
   [self resetScrollView];
 
   NSString * data = [NSString stringWithFormat:@"{ 'keyboardHeight': %d }", (int)height];
@@ -157,6 +156,7 @@ double stageManagerOffset;
   CGRect rect = [[notification.userInfo valueForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
   double height = rect.size.height;
 
+  [self setKeyboardHeight:height delay:0];
   [self resetScrollView];
 
   NSString * data = [NSString stringWithFormat:@"{ 'keyboardHeight': %d }", (int)height];
@@ -167,6 +167,7 @@ double stageManagerOffset;
 
 - (void)onKeyboardDidHide:(NSNotification *)notification
 {
+  [self setKeyboardHeight:0 delay:0];
   [self.bridge triggerWindowJSEventWithEventName:@"keyboardDidHide"];
   [self notifyListeners:@"keyboardDidHide" data:nil];
   [self resetScrollView];
@@ -198,19 +199,19 @@ double stageManagerOffset;
     if (paddingBottom > 0) {
         height = screenHeight - paddingBottom;
     }
-    
-    [self.bridge evalWithJs: [NSString stringWithFormat:@"(function() { var el = %@; var height = %d; if (el) { el.style.height = height > -1 ? height + 'px' : null; } })()", element, height]];
+
+    [self.bridge evalWithJs: [NSString stringWithFormat:@"requestAnimationFrame(() => { var el = %@; var height = %d; if (el) { el.style.height = height > -1 ? height + 'px' : null; } })", element, height]];
 }
 
 - (void)_updateFrame
 {
   CGRect f, wf = CGRectZero;
   UIWindow * window = nil;
-    
+
   if ([[[UIApplication sharedApplication] delegate] respondsToSelector:@selector(window)]) {
     window = [[[UIApplication sharedApplication] delegate] window];
   }
-  
+
   if (!window) {
     if (@available(iOS 13.0, *)) {
       NSPredicate *predicate = [NSPredicate predicateWithFormat:@"self isKindOfClass: %@", UIWindowScene.class];
@@ -324,7 +325,7 @@ static IMP WKOriginalImp;
 - (void)setStyle:(CAPPluginCall *)call
 {
   self.keyboardStyle = [call getString:@"style" defaultValue:@"LIGHT"];
-  [self changeKeyboardStyle:self.keyboardStyle]; 
+  [self changeKeyboardStyle:self.keyboardStyle];
   [call resolve];
 }
 
@@ -346,7 +347,7 @@ static IMP WKOriginalImp;
 - (void)getResizeMode:(CAPPluginCall *)call
 {
     NSString *mode;
-    
+
     if (self.keyboardResizes == ResizeIonic) {
         mode = @"ionic";
     } else if(self.keyboardResizes == ResizeBody) {
@@ -356,7 +357,7 @@ static IMP WKOriginalImp;
     } else {
         mode = @"none";
     }
-    
+
     NSDictionary *response = [NSDictionary dictionaryWithObject:mode forKey:@"mode"];
     [call resolve: response];
 }
@@ -403,4 +404,3 @@ static IMP WKOriginalImp;
 
 @end
 #pragma clang diagnostic pop
-
