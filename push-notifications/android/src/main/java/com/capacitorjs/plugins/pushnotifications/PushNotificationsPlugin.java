@@ -144,7 +144,8 @@ public class PushNotificationsPlugin extends Plugin {
                 JSObject extras = new JSObject();
 
                 for (String key : notification.extras.keySet()) {
-                    extras.put(key, notification.extras.getString(key));
+                    Object value = notification.extras.get(key);
+                    extras.put(key, value instanceof String ? (String) value : value != null ? String.valueOf(value) : null);
                 }
 
                 jsNotif.put("data", extras);
