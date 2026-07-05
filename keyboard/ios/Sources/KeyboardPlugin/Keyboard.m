@@ -108,8 +108,22 @@ double stageManagerOffset;
   [scrollView setContentInset:UIEdgeInsetsZero];
 }
 
+// Ignore keyboard notifications that are not local to this app. When
+// UIKeyboardIsLocalUserInfoKey is NO, the keyboard belongs to another context —
+// e.g. the in-app SFSafariViewController's out-of-process keyboard, or another
+// app in iPad multitasking — not our WebView. In `native` resize mode, reacting
+// to those leaked events resizes our WebView frame, and because a matching hide
+// is not reliably delivered when that context goes away, the frame is left
+// shrunk (empty space with no keyboard). A missing key is treated as local.
+- (BOOL)isNonLocalKeyboardNotification:(NSNotification *)notification
+{
+  NSNumber *isLocal = [notification.userInfo valueForKey:UIKeyboardIsLocalUserInfoKey];
+  return isLocal != nil && !isLocal.boolValue;
+}
+
 - (void)onKeyboardWillHide:(NSNotification *)notification
 {
+  if ([self isNonLocalKeyboardNotification:notification]) { return; }
   [self setKeyboardHeight:0 delay:0.1];
   [self resetScrollView];
   hideTimer = [NSTimer scheduledTimerWithTimeInterval:0 repeats:NO block:^(NSTimer * _Nonnull timer) {
@@ -121,6 +135,7 @@ double stageManagerOffset;
 
 - (void)onKeyboardWillShow:(NSNotification *)notification
 {
+  if ([self isNonLocalKeyboardNotification:notification]) { return; }
   if (hideTimer != nil) {
     [hideTimer invalidate];
   }
@@ -153,6 +168,7 @@ double stageManagerOffset;
 
 - (void)onKeyboardDidShow:(NSNotification *)notification
 {
+  if ([self isNonLocalKeyboardNotification:notification]) { return; }
   CGRect rect = [[notification.userInfo valueForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
   double height = rect.size.height;
 
@@ -167,6 +183,7 @@ double stageManagerOffset;
 
 - (void)onKeyboardDidHide:(NSNotification *)notification
 {
+  if ([self isNonLocalKeyboardNotification:notification]) { return; }
   [self setKeyboardHeight:0 delay:0];
   [self.bridge triggerWindowJSEventWithEventName:@"keyboardDidHide"];
   [self notifyListeners:@"keyboardDidHide" data:nil];
